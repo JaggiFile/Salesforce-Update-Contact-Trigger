@@ -1,0 +1,26 @@
+trigger UpdateContactAccountName on Account (after update) {
+    Set<Id> changeAccountIds = new Set<Id>();
+    
+    for(Account acc : Trigger.new){
+        Account oldAcc = Trigger.oldMap.get(acc.Id);
+        
+        if(acc.Name != oldAcc.Name){
+            changeAccountIds.add(acc.Id);
+        }
+    }
+    
+    if (!changeAccountIds.isEmpty()) {
+        List<Contact> contactsToUpdate = [
+            SELECT Id, AccountId, Account_Name__c
+            FROM Contact
+            WHERE AccountId IN :changeAccountIds
+        ];
+        
+        for (Contact con : contactsToUpdate) {
+            Account updatedAcc = Trigger.newMap.get(con.AccountId);
+            con.Account_Name__c = updatedAcc.Name;
+        }
+        
+        update contactsToUpdate;
+    }
+}
